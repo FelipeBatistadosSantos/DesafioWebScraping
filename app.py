@@ -7,6 +7,7 @@ app.config.from_pyfile('config.py')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    products = []
     if request.method == 'POST':
         search_term = request.form['search_term']
         products = scrape_products(search_term)
@@ -14,9 +15,7 @@ def index():
         csv_path = os.path.join('data', 'produtos.csv')
         save_to_csv(products, csv_path)
 
-        return redirect(url_for('index'))
-    
-    return render_template('index.html')
+    return render_template('index.html', products=products)
 
 if __name__ == '__main__':
     app.run(debug=True)

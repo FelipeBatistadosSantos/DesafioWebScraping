@@ -12,12 +12,12 @@ def scrape_products(search_term):
     soup = BeautifulSoup(response.text, 'html.parser')
 
     products = []
-    for item in soup.select('.product-list .product-list-loading-images .template-01'):
+    for item in soup.select('.product-one-of-three, .product-two-of-three, .product-three-of-three'):
         nome = item.select_one('.product-name').text.strip()
         preco_antigo = item.select_one('.old-price').text.strip() if item.select_one('.old-price') else None
         preco_pix = item.select_one('.price-boleto').text.strip() if item.select_one('.price-boleto') else None
-        preco_cartao = item.select_one('.card-price').text.strip() if item.select_one('.card-price') else None
-        img_url = item.select_one('.img-principal.lazyautosizes.ls-is-cached.lazyloaded img')['src'] if item.select_one('.img-principal.lazyautosizes.ls-is-cached.lazyloaded img') else None
+        preco_cartao = item.select_one('.price-cartao').text.strip() if item.select_one('.price-cartao') else None
+        img_url = item.select_one('.img-principal')['data-src'] if item.select_one('.img-principal') else None
 
         product = {
             'Nome': nome,
@@ -31,5 +31,6 @@ def scrape_products(search_term):
     return products
 
 def save_to_csv(products, filename='produtos.csv'):
-    df = pd.DataFrame(products)
+    column_titles = ['Nome', 'Preço Antigo', 'Preço Pix', 'Preço Cartão', 'URL Imagem']
+    df = pd.DataFrame(products, columns=column_titles)
     df.to_csv(filename, index=False, encoding='utf-8')
