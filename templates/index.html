@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Scraping - Lojas Maeto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding-top: 50px;
+        }
+
+        form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+        }
+
+        input[type="text"] {
+            width: 300px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        input[type="submit"] {
+            padding: 10px 20px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #4cae4c;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Pesquisa de Produtos - Lojas Maeto</h1>
+    <p>Insira o termo de busca para coletar informações dos produtos</p>
+
+    <form method="POST">
+        <input type="text" name="search_term" placeholder="Ex: Digite o termo da pesquisa" required>
+        <br>
+        <input type="submit" value="Pesquisar">
+    </form>
+
+    {% if products %}
+        <h2>Resultados da pesquisa:</h2>
+        <ul>
+            {% for product in products %}
+                <li>
+                    <strong>{{ product['Nome'] }}</strong><br>
+                    Preço Pix: {{ product['Preço Pix'] }}<br>
+                    Preço Cartão: {{ product['Preço Cartão'] }}<br>
+                    <img src="{{ product['URL Imagem'] }}" alt="Imagem do Produto" width="100">
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+</body>
+</html>
