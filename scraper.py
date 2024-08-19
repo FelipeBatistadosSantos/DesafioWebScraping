@@ -1,38 +1,77 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import json
 import os
 from unidecode import unidecode
 import re
 
-def scrape_products(search_term):
-    url = f"https://www.lojamaeto.com/busca?q={search_term}"
+def scrape_products(search_term, page_number=1):
+    url = f"https://www.lojamaeto.com/busca?q={search_term}&p={page_number}" if page_number > 1 else f"https://www.lojamaeto.com/busca?q={search_term}"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36'
     }
 
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, 'html.parser')
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Verifica se houve algum erro na requisição
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    products = []
-    for item in soup.select('.product-one-of-three, .product-two-of-three, .product-three-of-three'):
-        nome = item.select_one('.product-name').text.strip()
-        preco_antigo = item.select_one('.old-price').text.strip() if item.select_one('.old-price') else None
-        preco_pix = item.select_one('.price-boleto').text.strip() if item.select_one('.price-boleto') else None
-        preco_cartao = extract_preco_cartao(item)  # Use the updated function to get 'Preço Cartão'
-        img_url = item.select_one('.img-principal')['data-src'] if item.select_one('.img-principal') else None
+        products = []
+        for item in soup.select('.product-one-of-three, .product-two-of-three, .product-three-of-three'):
+            nome = item.select_one('.product-name').text.strip()
+            preco_antigo = item.select_one('.old-price').text.strip() if item.select_one('.old-price') else None
+            preco_pix = item.select_one('.price-boleto').text.strip() if item.select_one('.price-boleto') else None
+            preco_cartao = extract_preco_cartao(item)
+            img_url = item.select_one('.img-principal')['data-src'] if item.select_one('.img-principal') else None
 
-        product = {
-            'Nome': nome,
-            'Preço Antigo': preco_antigo,
-            'Preço Pix': preco_pix,
-            'Preço Cartão': preco_cartao,
-            'URL Imagem': img_url,
-        }
-        products.append(product)
-    
-    return products
+            product = {
+                'Nome': nome,
+                'Preço Antigo': preco_antigo,
+                'Preço Pix': preco_pix,
+                'Preço Cartão': preco_cartao,
+                'URL Imagem': img_url,
+            }
+            products.append(product)
+        
+        return products
+
+    except requests.exceptions.RequestException as e:
+        print(f"Erro na requisição: {e}")
+        return []
+
+def scrape_all_pages(search_term):
+    page_number = 1
+    all_products = []
+
+    while True:
+        print(f"Coletando dados da página {page_number}...")
+        products = scrape_products(search_term, page_number)
+        
+        if not products:
+            print(f"Nenhum produto encontrado na página {page_number}. Finalizando a coleta.")
+            break  # Se não houver produtos, pare a coleta
+        
+        all_products.extend(products)
+        
+        # Verifica se há uma próxima página
+        next_page_url = f"https://www.lojamaeto.com/busca?q={search_term}&p={page_number + 1}"
+        try:
+            response = requests.get(next_page_url)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Verifica se há produtos na próxima página
+            if not soup.select('.product-one-of-three, .product-two-of-three, .product-three-of-three'):
+                print(f"Próxima página não encontrada. Finalizando a coleta.")
+                break
+
+        except requests.exceptions.RequestException as e:
+            print(f"Erro ao verificar a próxima página: {e}")
+            break
+
+        page_number += 1
+
+    return all_products
 
 def clean_product_name(nome):
     nome_sem_acentos = unidecode(nome)
@@ -72,7 +111,7 @@ def save_to_csv(products, search_term, search_count):
     df['Nome'] = df['Nome'].apply(clean_product_name)
     df['Preço Antigo'] = df['Preço Antigo'].apply(remove_currency_symbol)
     df['Preço Pix'] = df['Preço Pix'].apply(remove_currency_symbol)
-    df['Preço Cartão'] = df['Preço Cartão']  # Already formatted by extract_preco_cartao
+    df['Preço Cartão'] = df['Preço Cartão']
 
     df.to_csv(csv_path, index=False, encoding='utf-8')
     
@@ -83,68 +122,10 @@ def save_to_csv(products, search_term, search_count):
 
     return csv_path
 
-def extract_characteristics(soup):
-    characteristics = {}
-
-    flex_divs = soup.select('div.flex')
-    
-    for flex_div in flex_divs:
-        dt_elements = flex_div.find_all('dt')
-        dd_elements = flex_div.find_all('dd')
-        
-        for dt, dd in zip(dt_elements, dd_elements):
-            title = dt.get_text(strip=True)
-            description = dd.get_text(strip=True)
-            
-            characteristics[title] = description
-    
-    return json.dumps(characteristics, ensure_ascii=False, indent=4)
-
-def extract_product_characteristics(product_url):
-    response = requests.get(product_url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    characteristics = {}
-    
-    for flex_div in soup.select('div.flex'):
-        dt_elements = flex_div.find_all('dt')
-        dd_elements = flex_div.find_all('dd')
-
-        for dt, dd in zip(dt_elements, dd_elements):
-            title = dt.get_text(strip=True)
-            description = dd.get_text(strip=True)
-            characteristics[title] = description
-
-    return characteristics
-
-def scrape_products_and_characteristics(search_term):
-    url = f"https://www.lojamaeto.com/busca?q={search_term}"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    all_products_data = []
-    for item in soup.select('.product-one-of-three, .product-two-of-three, .product-three-of-three'):
-        product_url = item.select_one('a')['href']  # Obter a URL do produto
-        product_page_url = f"https://www.lojamaeto.com{product_url}"
-
-        try:
-            characteristics = extract_product_characteristics(product_page_url)
-            all_products_data.append(characteristics)
-        except Exception as e:
-            print(f"Erro ao extrair características para {product_page_url}: {e}")
-
-    with open('produtos.json', 'w') as f:
-        json.dump(all_products_data, f, indent=4)
-
-def check_data():
-    df = pd.read_csv('data/todos_produtos.csv')
-    print(df.dtypes)
-    print(df.head())
-
 def main(search_term, search_count):
-    products = scrape_products(search_term)
+    products = scrape_all_pages(search_term)
     save_to_csv(products, search_term, search_count)
-    check_data()
+    print(f"Dados salvos em 'data/{search_term.replace(' ', '-').lower()}{search_count}.csv' e 'data/todos_produtos.csv'.")
 
 search_term = "lampada"
 search_count = 1
