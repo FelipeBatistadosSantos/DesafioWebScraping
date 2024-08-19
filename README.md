@@ -34,15 +34,15 @@ Antes de iniciar o projeto, você precisa configurar um ambiente virtual e insta
 4. Inicie o servidor flask:
     Execute este código no terminal:
 
-    python app.py
+    python src/app.py
 
 5. Acesse a aplicação:
 
     Abra seu navegador e vá para http://127.0.0.1:5000 para usar a aplicação.
 
 # 📁 Estrutura do Projeto
- - app.py: Código principal do aplicativo Flask.
- - scraper.py: Código responsável pela raspagem de dados.
+ - src/app.py: Código principal do aplicativo Flask.
+ - src/scraper.py: Código responsável pela raspagem de dados.
  - templates/index.html: Arquivo HTML para a interface web.
  - requirements.txt: Lista de pacotes Python necessários.
  - data/: Diretório onde os arquivos CSV e JSON são salvos.
