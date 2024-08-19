@@ -40,9 +40,33 @@
         input[type="submit"]:hover {
             background-color: #4cae4c;
         }
+
+        .download-buttons {
+            margin-bottom: 20px; /* Ajuste para espaço abaixo dos botões */
+        }
+
+        .download-buttons a {
+            display: inline-block;
+            padding: 10px 20px;
+            color: white;
+            background-color: #5bc0de;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        .download-buttons a:hover {
+            background-color: #31b0d5;
+        }
     </style>
 </head>
 <body>
+
+    <div class="download-buttons">
+        {% if products %}
+            <a href="{{ url_for('download_file', filename='todos_produtos.csv') }}">Baixar Todos os Produtos</a>
+        {% endif %}
+    </div>
 
     <h1>Pesquisa de Produtos - Lojas Maeto</h1>
     <p>Insira o termo de busca para coletar informações dos produtos</p>
